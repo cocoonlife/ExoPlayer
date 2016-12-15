@@ -20,6 +20,7 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
+import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.Extractor;
 import com.google.android.exoplayer2.extractor.TimestampAdjuster;
 import com.google.android.exoplayer2.extractor.mp3.Mp3Extractor;
@@ -29,6 +30,8 @@ import com.google.android.exoplayer2.extractor.ts.AdtsExtractor;
 import com.google.android.exoplayer2.extractor.ts.DefaultStreamReaderFactory;
 import com.google.android.exoplayer2.extractor.ts.TsExtractor;
 import com.google.android.exoplayer2.source.BehindLiveWindowException;
+import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.SinglePeriodTimeline;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.chunk.Chunk;
 import com.google.android.exoplayer2.source.chunk.ChunkedTrackBlacklistUtil;
@@ -36,6 +39,7 @@ import com.google.android.exoplayer2.source.chunk.DataChunk;
 import com.google.android.exoplayer2.source.hls.playlist.HlsMasterPlaylist;
 import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist;
 import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.Segment;
+import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylist;
 import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylistParser;
 import com.google.android.exoplayer2.trackselection.BaseTrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
@@ -121,6 +125,9 @@ import java.util.Locale;
   private long durationUs;
   private IOException fatalError;
 
+  private HlsPlaylist playlist;
+  private MediaSource.Listener sourceListener;
+
   private HlsInitializationChunk lastLoadedInitializationChunk;
   private Uri encryptionKeyUri;
   private byte[] encryptionKey;
@@ -141,11 +148,13 @@ import java.util.Locale;
    *     same provider.
    */
   public HlsChunkSource(String baseUri, HlsMasterPlaylist.HlsUrl[] variants, DataSource dataSource,
-      TimestampAdjusterProvider timestampAdjusterProvider) {
+                        TimestampAdjusterProvider timestampAdjusterProvider, HlsPlaylist playlist, MediaSource.Listener sourceListener) {
     this.baseUri = baseUri;
     this.variants = variants;
     this.dataSource = dataSource;
     this.timestampAdjusterProvider = timestampAdjusterProvider;
+    this.playlist = playlist;
+    this.sourceListener = sourceListener;
     playlistParser = new HlsPlaylistParser();
     variantPlaylists = new HlsMediaPlaylist[variants.length];
     variantLastPlaylistLoadTimesMs = new long[variants.length];
@@ -571,7 +580,9 @@ import java.util.Locale;
     variantLastPlaylistLoadTimesMs[variantIndex] = SystemClock.elapsedRealtime();
     variantPlaylists[variantIndex] = mediaPlaylist;
     live |= mediaPlaylist.live;
-    durationUs = live ? C.TIME_UNSET : mediaPlaylist.durationUs;
+    durationUs = mediaPlaylist.durationUs;
+    Timeline timeline = new SinglePeriodTimeline(durationUs, durationUs, 0, 0, true, live);
+    sourceListener.onSourceInfoRefreshed(timeline, playlist);
   }
 
   // Private classes.
