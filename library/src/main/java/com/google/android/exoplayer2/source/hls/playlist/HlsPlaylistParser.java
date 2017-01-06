@@ -16,6 +16,9 @@
 package com.google.android.exoplayer2.source.hls.playlist;
 
 import android.net.Uri;
+import android.util.Log;
+
+import com.google.android.exoplayer2.BuildConfig;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.ParserException;
@@ -26,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -229,9 +233,12 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
     String encryptionKeyUri = null;
     String encryptionIV = null;
 
+    StringBuilder playlistString = new StringBuilder();
     String line;
     while (iterator.hasNext()) {
       line = iterator.next();
+      playlistString.append(line);
+      playlistString.append("\n");
       if (line.startsWith(TAG_INIT_SEGMENT)) {
         String uri = parseStringAttr(line, REGEX_URI);
         String byteRange = parseOptionalStringAttr(line, REGEX_ATTR_BYTERANGE);
@@ -301,6 +308,11 @@ public final class HlsPlaylistParser implements ParsingLoadable.Parser<HlsPlayli
         live = false;
       }
     }
+
+    if(BuildConfig.DEBUG) {
+      Log.i(HlsPlaylistParser.class.getName(), "Playlist as string:\n\n " + playlistString.toString());
+    }
+
     return new HlsMediaPlaylist(baseUri, mediaSequence, targetDurationSecs, version, live,
         initializationSegment, Collections.unmodifiableList(segments));
   }
