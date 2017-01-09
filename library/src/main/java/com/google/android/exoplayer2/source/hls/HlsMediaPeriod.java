@@ -235,8 +235,8 @@ import java.util.List;
 
   @Override
   public long seekToUs(long positionUs) {
-    // Treat all seeks into non-seekable media as being to t=0.
-    positionUs = isLive ? 0 : positionUs;
+    //Modified from original behaviour - used to check if the playlist was live and if so seek to 00:00
+    //Now it seeks the same as it would in a non-live playlist
     timestampAdjusterProvider.reset();
     for (HlsSampleStreamWrapper sampleStreamWrapper : enabledSampleStreamWrappers) {
       sampleStreamWrapper.seekTo(positionUs);
